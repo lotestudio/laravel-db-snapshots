@@ -25,20 +25,25 @@ class Create extends Command
 
         $compress = $this->option('compress') || config('db-snapshots.compress', false);
 
-        $tables = $this->option('table') ?: config('db-snapshots.tables', null);
-        $tables = is_string($tables) ? explode(',', $tables) : $tables;
+        $tables = $this->normalizeListOption(
+            $this->option('table'),
+            config('db-snapshots.tables', null)
+        );
 
         if (is_null($tables)) {
-            $exclude = $this->option('exclude') ?: config('db-snapshots.exclude', null);
-            $exclude = is_string($exclude) ? explode(',', $exclude) : $exclude;
+            $exclude = $this->normalizeListOption(
+                $this->option('exclude'),
+                config('db-snapshots.exclude', null)
+            );
         } else {
             $exclude = null;
         }
 
-        $extraOptions = $this->option('extraOptions') ?: config('db-snapshots.extraOptions', []);
-        $extraOptions = is_string($extraOptions) ? explode(',', $extraOptions) : $extraOptions;
-
-
+       $extraOptions = $this->normalizeListOption(
+            $this->option('extraOptions'),
+            config('db-snapshots.extraOptions', [])
+        );
+        
         $snapshot = app(SnapshotFactory::class)->create(
             $snapshotName,
             config('db-snapshots.disk'),
@@ -52,6 +57,22 @@ class Create extends Command
         $size = Format::humanReadableSize($snapshot->size());
 
         $this->info("Snapshot `{$snapshotName}` created (size: {$size})");
+    }
+
+    private function normalizeListOption(array|string|null $optionValue, array|string|null $configValue = null): ?array
+    {
+        $value = $optionValue ?: $configValue;
+
+        if (is_null($value)) {
+            return null;
+        }
+
+        return collect((array) $value)
+            ->flatMap(fn (string $item): array => explode(',', $item))
+            ->map(fn (string $item): string => trim($item))
+            ->filter()
+            ->values()
+            ->all();
     }
 
     private function getSnapshotName(): string
