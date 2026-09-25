@@ -25,13 +25,13 @@ class Create extends Command
 
         $compress = $this->option('compress') || config('db-snapshots.compress', false);
 
-        $tables = $this->normalizeListOption(
+        $tables = $this->normalizeTables(
             $this->option('table'),
             config('db-snapshots.tables', null)
         );
 
         if (is_null($tables)) {
-            $exclude = $this->normalizeListOption(
+            $exclude = $this->normalizeTables(
                 $this->option('exclude'),
                 config('db-snapshots.exclude', null)
             );
@@ -39,11 +39,9 @@ class Create extends Command
             $exclude = null;
         }
 
-       $extraOptions = $this->normalizeListOption(
-            $this->option('extraOptions'),
-            config('db-snapshots.extraOptions', [])
-        );
-        
+        $extraOptions = $this->option('extraOptions') ?: config('db-snapshots.extraOptions', []);
+        $extraOptions = is_string($extraOptions) ? explode(',', $extraOptions) : $extraOptions;
+
         $snapshot = app(SnapshotFactory::class)->create(
             $snapshotName,
             config('db-snapshots.disk'),
@@ -59,7 +57,7 @@ class Create extends Command
         $this->info("Snapshot `{$snapshotName}` created (size: {$size})");
     }
 
-    private function normalizeListOption(array|string|null $optionValue, array|string|null $configValue = null): ?array
+    private function normalizeTables(array|string|null $optionValue, array|string|null $configValue): ?array
     {
         $value = $optionValue ?: $configValue;
 
